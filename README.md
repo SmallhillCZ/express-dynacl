@@ -1,5 +1,5 @@
 # express-dynacl
-Express dynamic access control list middleware, that allows to grant access to queries based on request details
+express-dynacl is a simple ExpressJS dynamic access control list middleware, that allows to grant access to queries based on request details.
 
 ## Using express-dynacl
 
