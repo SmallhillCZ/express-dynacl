@@ -13,13 +13,13 @@ var guest = {
     "watch": true, 
     "drink": true
   },
-  "beer": {
+  "alcoholic": {
     "watch": true
   }
 };
 
 var guestWithId = {
-  "beer": {
+  "alcoholic": {
     // or you can use a function of request
     "drink": function(req){
       return isEligibleToDrink(req) // check if over 18/21/...
