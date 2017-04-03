@@ -60,7 +60,7 @@ var aclOptions = {
 	logConsole: true,
   
   // set the req.user property where roles are stored (default is req.user.roles)
-  rolesProperty: "roles"
+  	rolesProperty: "roles"
 }
 
 acl.config(aclOptions);
