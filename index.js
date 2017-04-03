@@ -2,6 +2,8 @@
 // initiate variable to store options
 var options = {};
 
+
+
 // function to evaluate single permission
 function evalPermission(permission,req){
 
@@ -16,27 +18,32 @@ function evalPermission(permission,req){
 }
 
 
+
 // function to get user roles and evaluate permissions
 function evalACL(resource,operation,req){
 
-	// import roles from options
+	// get simple reference to acl roles
 	var aclRoles = options.roles || {};
 	
-	// var to get all current user roles
-	var userRoles = [];
-	
-	// set default roles
-	if(options.defaultRoles) options.defaultRoles.filter(role => aclRoles[role]).map(role => userRoles.push(aclRoles[role]));
-	
-	// set user roles
-	if(req.user && req.user.roles) req.user.roles.filter(role => aclRoles[role]).map(role => userRoles.push(aclRoles[role]));	
-	
-	console.log();
+	// clear the user roles array
+	var currentRoles = [];
 
-	return userRoles.some(role => {
-		
-		// invalid role (e.g. or some you have deleted, but user still has it in his token)
-		if(!role) return false;
+	// throw an error on invalid user roles
+	var rolesProperty = options.rolesProperty || "roles";
+	var userRoles = req.user[rolesProperty] || [];
+
+	// if strict roles property is set to true, then nonexistent roles will throw error
+	if(options.strictRoles){
+		if(userRoles.some(role => !aclRoles[role])) throw new Error("Invalid role: " + role);
+	}
+
+	// set user roles
+	userRoles
+		.filter(role => !aclRoles[role]) // filter out invalid roles
+		.forEach(role => currentRoles.push(aclRoles[role])); // assign roles to currentRoles array
+
+	// go through all roles and check if some has permission, otherwise return false
+	return currentRoles.some(role => {
 
 		// in case we have set permission for resource and action
 		if(role[resource] && role[resource][operation]) return evalPermission(role[resource][operation],req);
@@ -52,6 +59,9 @@ function evalACL(resource,operation,req){
 	});
 }
 
+
+
+// middleware factory
 function dynacl(resource,operation){
 
 	// return middleware function for ExpressJS
@@ -75,10 +85,11 @@ function dynacl(resource,operation){
 }
 
 // function to configure DynACL
-dynacl.config = function(config){
-	options = config;
+dynacl.config = function(setOptions){
+	
+	// assign configurations
+	options = setOptions;
+	
 }
 
 module.exports = dynacl;
-
-
