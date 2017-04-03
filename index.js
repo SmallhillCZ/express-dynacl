@@ -30,16 +30,21 @@ function evalACL(resource,operation,req){
 
 	// throw an error on invalid user roles
 	var rolesProperty = options.rolesProperty || "roles";
-	var userRoles = req.user[rolesProperty] || [];
+	var userRoles = req.user && req.user[rolesProperty] ? req.user[rolesProperty] : [];
+	
+	// add default roles
+	if(options.defaultRoles) userRoles = userRoles.concat(options.defaultRoles);
 
 	// if strict roles property is set to true, then nonexistent roles will throw error
 	if(options.strictRoles){
 		if(userRoles.some(role => !aclRoles[role])) throw new Error("Invalid role: " + role);
 	}
+	
+	userRoles.push("dsaads");
 
 	// set user roles
 	userRoles
-		.filter(role => !aclRoles[role]) // filter out invalid roles
+		.filter(role => aclRoles[role]) // filter out invalid roles
 		.forEach(role => currentRoles.push(aclRoles[role])); // assign roles to currentRoles array
 
 	// go through all roles and check if some has permission, otherwise return false
