@@ -97,4 +97,7 @@ dynacl.config = function(setOptions){
 	
 }
 
+// just check the permission without using as middleware
+dynacl.check = evalACL;
+
 module.exports = dynacl;
