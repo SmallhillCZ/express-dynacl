@@ -9,7 +9,7 @@ Set up roles:
 
 var guest = {
   "nonalcoholic": {
-    // you can use a boolean as in standard ACL roles
+    // you can use a boolean as in standard ACL roles, default is false
     "watch": true, 
     "drink": true
   },
