@@ -100,7 +100,7 @@ module.exports = router;
 
 var acl = require("express-dynacl");
 
-router.get("/pub/coke", (req,res) => {
+router.get("/pub/drink", (req,res) => {
 	if(acl.check("nonalcoholic","drink",req)) // drink coke
 	if(acl.check("alcoholic","drink",req)) // drink beer
 });
