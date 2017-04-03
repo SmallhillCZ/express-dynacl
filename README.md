@@ -90,6 +90,22 @@ router.get("/pub/beer", acl("alcoholic","drink"), (req,res) => {
 });
 ```
 
+Use inside request:
+```js
+var express = require('express');
+var app = express();
+
+var router = express.Router();
+module.exports = router;
+
+var acl = require("express-dynacl");
+
+router.get("/pub/coke", (req,res) => {
+	if(acl.check("nonalcoholic","drink",req)) // drink coke
+	if(acl.check("alcoholic","drink",req)) // drink beer
+});
+```
+
 ## Setting user roles
 
 User roles are assigned by a string array of role names located at ```req.user.roles``` or in other ```req.user``` property set in configuration.
