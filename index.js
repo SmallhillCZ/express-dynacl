@@ -34,6 +34,9 @@ function evalACL(resource,operation,req){
 	
 	// add default roles
 	if(options.defaultRoles) userRoles = userRoles.concat(options.defaultRoles);
+	
+	// add default user roles
+	if(options.userRoles) userRoles = userRoles.concat(options.userRoles);
 
 	// if strict roles property is set to true, then nonexistent roles will throw error
 	if(options.strictRoles){
