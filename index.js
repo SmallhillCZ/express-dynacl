@@ -1,106 +1,132 @@
+var dynacl = (function(){
 
-// initiate variable to store options
-var options = {};
+  // initiate variable to store options
+  var options = {};
 
+  // default options to be overriden by dynacl.config
+  const defaultOptions = {
 
+    roles: {},
 
-// function to evaluate single permission
-function evalPermission(permission,req){
+    userRoles: req => req.user ? req.user.roles : [],
 
-	// if permission is a function, then evaluate its return value
-	if(typeof permission == 'function') return (permission(req) === true);
+    defaultRole: "guest",
 
-	// if permission is boolean true, then evaluate the value
-	else if (permission === true) return true;
+    logString: (action,result,req) => "DynACL " + (result ? "OK" : "XX") + ": " + action + (req.user ? " (user: " + req.user._id + "; roles: " + (req.user.roles ? req.user.roles.join(",") : "") + ")" : " (" + options.defaultRole + ")"),
+    logConsole: false,
 
-	// if permission unspecified or misspecified, return false
-	else return false;
-}
+    authorized: (req,res,next) => next(),
+    unauthorized: (req,res,next) => res.status(401).send("Unauthorized (" + (req.user ? "logged, no authorization" : "not logged") + ")")
 
-
-
-// function to get user roles and evaluate permissions
-function evalACL(resource,operation,req){
-
-	// get simple reference to acl roles
-	var aclRoles = options.roles || {};
-	
-	// clear the user roles array
-	var currentRoles = [];
-
-	// throw an error on invalid user roles
-	var rolesProperty = options.rolesProperty || "roles";
-	var userRoles = req.user && req.user[rolesProperty] ? req.user[rolesProperty] : [];
-	
-	// add default roles
-	if(options.defaultRoles) userRoles = userRoles.concat(options.defaultRoles);
-	
-	// add default user roles
-	if(options.userRoles) userRoles = userRoles.concat(options.userRoles);
-
-	// if strict roles property is set to true, then nonexistent roles will throw error
-	if(options.strictRoles){
-		if(userRoles.some(role => !aclRoles[role])) throw new Error("Invalid role: " + role);
-	}
-	
-	userRoles.push("dsaads");
-
-	// set user roles
-	userRoles
-		.filter(role => aclRoles[role]) // filter out invalid roles
-		.forEach(role => currentRoles.push(aclRoles[role])); // assign roles to currentRoles array
-
-	// go through all roles and check if some has permission, otherwise return false
-	return currentRoles.some(role => {
-
-		// in case we have set permission for resource and action
-		if(role[resource] && role[resource][operation]) return evalPermission(role[resource][operation],req);
-
-		// in case we have set permission for resource and default action
-		else if(role[resource] && role[resource]["*"]) return evalPermission(role[resource]["*"],req);
-
-		// in case we have set default permission
-		else if(role["*"]) return evalPermission(role["*"],req);
-
-		// if nothing is set, user does not have permission
-		else return false;
-	});
-}
+  }
 
 
 
-// middleware factory
-function dynacl(resource,operation){
 
-	// return middleware function for ExpressJS
-	return function(req,res,next){
+  // function to get user roles and evaluate permissions
+  async function checkCan(action,req,params){
 
-		// evaluate permission
-		var result = evalACL(resource,operation,req);
+    // get simple reference to acl roles
+    var aclRoles = options.roles || {};
 
-		// log access
-		var logString = "ACL " + (result ? "OK" : "XX") + ": " + resource + "/" + operation + (req.user ? " (user: " + req.user._id + "; roles: " + (req.user.roles ? req.user.roles.join(",") : "") + ")" : " (guest)");
-		if(options.logConsole) console.log(logString);
-		//TODO: logFile
+    // clear the user roles array
+    var currentRoles = [];
 
-		// if permission granted, send execution to the next middleware/route
-		if(result) next();
+    // throw an error on invalid user roles
+    var userRoles = options.userRoles(req)
 
-		// if permission not granted, then end request with 401 Unauthorized
-		else res.status(401).send("Unauthorized (" + (req.user ? "logged, no authorization" : "not logged") + ")");
+    // add default roles
+    if(options.defaultRole) userRoles.push(options.defaultRole);
 
-	}
-}
+    // if strict roles property is set to true, then nonexistent roles will throw error
+    if(options.strictRoles){
+      if(userRoles.some(role => !aclRoles[role])) throw new Error("Invalid role: " + role);
+    }
 
-// function to configure DynACL
-dynacl.config = function(setOptions){
-	
-	// assign configurations
-	options = setOptions;
-	
-}
+    // set user roles
+    userRoles
+      .filter(role => aclRoles[role]) // filter out invalid roles
+      .forEach(role => currentRoles.push(aclRoles[role])); // assign roles to currentRoles array
 
-// just check the permission without using as middleware
-dynacl.check = evalACL;
+    // go through all roles and check if some has permission, otherwise return false
+    var role;
+    while(!!(role = currentRoles.shift())){
+
+      let result = await checkRoleCan(role,action,req,params);
+
+      if(result) return true;
+
+    }
+
+    return false;
+  }
+
+  async function checkRoleCan(role,action,req,params){
+
+    // in case we have admin role, we dont have to check anything
+    if(role.admin) return true;
+
+    // in case we have set permission for resource and action
+    if(role.can[action]){
+      let permission = role.can[action];
+      // if permission is a function, then evaluate its return value, otherwise evaluate the permission,
+      // both Promise and static value will be resolved
+      let result = await Promise.resolve(typeof permission === 'function' ? permission(req,params) : permission);
+
+      if(result) return true;
+    }
+
+    // in case the role inherits, we check the parent role
+    if(role.inherits){
+
+      let result = await checkRoleCan(options.roles[role.inherits],action,req,params);
+
+      if(result) return true;
+    }
+
+    return false;
+  }
+
+
+  // middleware factory
+  function dynacl(action){
+
+    // return middleware function for ExpressJS
+    return async function(req,res,next){
+
+      // evaluate permission
+      var result = await checkCan(action,req,{});
+
+      // log access
+      if(options.logConsole){
+        let logString = options.logString(action,result,req);
+        if(result) console.log(logString);
+        else console.error(logString);
+      }
+
+
+      // if permission granted, send execution to the next middleware/route
+      if(result) options.authorized(req,res,next);
+
+      // if permission not granted, then end request with 401 Unauthorized
+      else options.unauthorized(req,res,next)
+
+    }
+  }
+
+  // function to configure DynACL
+  dynacl.config = function(userOptions){
+
+    // assign configurations
+    options = Object.assign({},defaultOptions,userOptions);
+
+  }
+
+  // just check the permission without using as middleware
+  dynacl.can = (action,req,params) => checkCan(action,req,params || {});
+
+  return dynacl;
+  
+})();
 
 module.exports = dynacl;
