@@ -33,7 +33,7 @@ var options = {
       inherits: ["user"]
     },
     
-    "admin: {
+    "admin": {
       admin: true
     }
   },
