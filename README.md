@@ -3,19 +3,19 @@ express-dynacl is a simple ExpressJS dynamic access control list middleware, tha
 
 ## Using express-dynacl
 
-Set up roles:
-
 ```js
 
 var options = {
 
   roles: {
+  
     "guest": {
       can: {
         "posts:list": true,
         "posts:edit": false
       }
     },
+    
     "user": {
       can: {
         "posts:create": true,
@@ -23,14 +23,16 @@ var options = {
           return Post.find({_id:params.post.id}).then(post => post.owner === req.user.id);
         }
       },
-      inherits: "guest"
+      inherits: ["guest"]
     },
+    
     "moderator":{
       can: {
         "posts:edit": true
       },
-      inherits: "user"
+      inherits: ["user"]
     },
+    
     "admin: {
       admin: true
     }
@@ -48,7 +50,7 @@ var options = {
   unauthorized: (req,res,next) => res.sendStatus(401) // middleware to use when unauthorized (default is to respond with 401
 }
 
-acl.config(aclOptions);
+acl.config(options);
 ```
 
 Use as middleware:
@@ -62,16 +64,16 @@ module.exports = router;
 
 var acl = require("express-dynacl");
 
-router.get("/pub/coke", acl("nonalcoholic","drink"), (req,res) => {
-	// drink coke
+router.get("/posts", acl("posts:list"), (req,res) => {
+	// list posts
 });
 
-router.get("/pub/beermenu", acl("alcoholic","watch"), (req,res) => {
-	// watch beer menu
+router.post("/posts", acl("posts:create"), (req,res) => {
+	// create post
 });
 
-router.get("/pub/beer", acl("alcoholic","drink"), (req,res) => {
-	// drink beer
+router.put("/posts/1", acl("posts:edit"), (req,res) => {
+	// edit post
 });
 ```
 
@@ -85,15 +87,13 @@ module.exports = router;
 
 var acl = require("express-dynacl");
 
-router.get("/pub/drink", (req,res) => {
-	if(acl.check("nonalcoholic","drink",req)) // drink coke
-	if(acl.check("alcoholic","drink",req)) // drink beer
+router.put("/posts/:id", (req,res) => {
+	if(acl.can("posts:edit", req, {post: {id: req.params.id}})) {
+   // edit post
+  }
+
 });
 ```
-
-## Setting user roles
-
-User roles are assigned by a string array of role names located at ```req.user.roles``` or in other ```req.user``` property set in configuration.
 
 ## TODO
 - logging to file

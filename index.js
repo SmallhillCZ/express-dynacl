@@ -8,7 +8,7 @@ var dynacl = (function(){
 
     roles: {},
 
-    userRoles: req => req.user ? req.user.roles : [],
+    userRoles: req => req.user ? req.user.roles || [] : [],
 
     defaultRole: "guest",
 
@@ -81,10 +81,16 @@ var dynacl = (function(){
 
     // in case the role inherits, we check the parent role
     if(role.inherits){
+           
+      for ( var i =0;i < role.inherits.length; i++){
+        
+        //check the inherited role
+        let result = await checkRoleCan(options.roles[role.inherits[i]],action,req,params);
+        
+        // terminate and return true if approved
+        if(result) return true;
+      }
 
-      let result = await checkRoleCan(options.roles[role.inherits],action,req,params);
-
-      if(result) return true;
     }
 
     return false;
