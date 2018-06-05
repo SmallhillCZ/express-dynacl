@@ -5,6 +5,8 @@ express-dynacl is a simple ExpressJS dynamic access control list middleware, tha
 
 ```js
 
+var acl = require("express-dynacl");
+
 var options = {
 
   roles: {
@@ -59,20 +61,17 @@ Use as middleware:
 var express = require('express');
 var app = express();
 
-var router = express.Router();
-module.exports = router;
-
 var acl = require("express-dynacl");
 
-router.get("/posts", acl("posts:list"), (req,res) => {
+app.get("/posts", acl("posts:list"), (req,res) => {
 	// list posts
 });
 
-router.post("/posts", acl("posts:create"), (req,res) => {
+app.post("/posts", acl("posts:create"), (req,res) => {
 	// create post
 });
 
-router.put("/posts/1", acl("posts:edit"), (req,res) => {
+app.put("/posts/1", acl("posts:edit"), (req,res) => {
 	// edit post
 });
 ```
@@ -82,12 +81,9 @@ Use inside request:
 var express = require('express');
 var app = express();
 
-var router = express.Router();
-module.exports = router;
-
 var acl = require("express-dynacl");
 
-router.put("/posts/:id", (req,res) => {
+app.put("/posts/:id", (req,res) => {
 	if(acl.can("posts:edit", req, {post: {id: req.params.id}})) {
    // edit post
   }
