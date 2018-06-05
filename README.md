@@ -7,6 +7,8 @@ express-dynacl is a simple ExpressJS dynamic access control list middleware, tha
 
 var acl = require("express-dynacl");
 
+var Post = require("./models/post");
+
 var options = {
 
   roles: {
@@ -21,9 +23,7 @@ var options = {
     "user": {
       can: {
         "posts:create": true,
-        "posts:edit": (req,params) => {
-          return Post.find({_id:params.post.id}).then(post => post.owner === req.user.id);
-        }
+        "posts:edit": (req,params) => Post.find({_id:params.post.id}).then(post => post.owner === req.user.id)
       },
       inherits: ["guest"]
     },
