@@ -7,60 +7,45 @@ Set up roles:
 
 ```js
 
-var guest = {
-  "nonalcoholic": {
-    // you can use a boolean as in standard ACL roles, default is false
-    "watch": true, 
-    "drink": true
-  },
-  "alcoholic": {
-    "watch": true
-  }
-};
+var options = {
 
-var guestWithId = {
-  "alcoholic": {
-    // or you can use a function of request
-    "drink": function(req){
-      return isEligibleToDrink(req) // check if over 18/21/...
+  roles: {
+    "guest": {
+      can: {
+        "posts:list": true,
+        "posts:edit": false
+      }
+    },
+    "user": {
+      can: {
+        "posts:create": true,
+        "posts:edit": (req,params) => {
+          return Post.find({_id:params.post.id}).then(post => post.owner === req.user.id);
+        }
+      },
+      inherits: "guest"
+    },
+    "moderator":{
+      can: {
+        "posts:edit": true
+      },
+      inherits: "user"
+    },
+    "admin: {
+      admin: true
     }
-  }
-};
-
-var barowner = {
-  "*": true // give admin role
-};
-
-module.exports = {
-  "guest": guest,
-  "guestWithId": guestWithId,
-  "barowner": barowner
-}
-```
-
-Import and configure the middleware:
-
-```js
-var acl = require("express-dynacl");
-
-// configure DynACL
-var aclOptions = {
-
-  // load roles (default is no roles)
-	roles: {
-		"guest": require("./roles").guest,
-		"guestWithId": require(".roles").guestWithId,
-		"barowner": require(".roles").barowner
-	},
+  },
+  
+  userRoles: req => req.user ? req.user.roles : [], // get user roles
   
   // set some of the roles as default - each request will expect that user has these roles (default is none)
-	defaultRoles: ["guest"],
+	defaultRole: "guest",
   
-  // enable logging to console (default is false)
-	logConsole: true,
+  logString: (role,action,result,req) => "DynACL " + (result ? "OK" : "XX") + " ( action: " + action + (result ? ", role: " + role : "") + " )", // log output string
+	logConsole: true, // enable logging to console (default is false)
   
-  // set the req.user property where roles are stored (default is req.user.roles)
-  	rolesProperty: "roles"
+  authorized: (req,res,next) => next(), // middleware to use when authorized (default is send to next middleware)
+  unauthorized: (req,res,next) => res.sendStatus(401) // middleware to use when unauthorized (default is to respond with 401
 }
 
 acl.config(aclOptions);
