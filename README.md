@@ -23,7 +23,7 @@ var options = {
     "user": {
       can: {
         "posts:create": true,
-        "posts:edit": (req,params) => Post.find({_id:params.post.id}).then(post => post.owner === req.user.id)
+        "posts:edit": (req,params) => Post.findOne({_id:params.post.id}).then(post => post.owner === req.user.id)
       },
       inherits: ["guest"]
     },
