@@ -43,10 +43,10 @@ var options = {
   userRoles: req => req.user ? req.user.roles : [], // get user roles
   
   // set some of the roles as default - each request will expect that user has these roles (default is none)
-	defaultRole: "guest",
+  defaultRole: "guest",
   
   logString: (role,action,result,req) => "DynACL " + (result ? "OK" : "XX") + " ( action: " + action + (result ? ", role: " + role : "") + " )", // log output string
-	logConsole: true, // enable logging to console (default is false)
+  logConsole: true, // enable logging to console (default is false)
   
   authorized: (req,res,next) => next(), // middleware to use when authorized (default is send to next middleware)
   unauthorized: (req,res,next) => res.sendStatus(401) // middleware to use when unauthorized (default is to respond with 401
