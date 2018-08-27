@@ -28,32 +28,42 @@ function doInspect(rolesFile,srcDir){
   
   var actions = {};
   
-  function saveRole(parent,action,role){
-    var parts = action[0].split(treeSeparator,2);
+  
+  function saveRole(roleName,role,inherited){
+    
+    if(role.can) Object.entries(role.can).forEach(action => saveAction(actions,action,roleName,inherited));
+    
+    if(role.inherits) Object.entries(role.inherits).forEach(inheritedRole => saveRole(roleName + "(" + inheritedRole[1] + ")",roles[inheritedRole[1]],true));
+  }
+  
+  function saveAction(parent,action,roleName,inherited){
+    var parts = action[0].split(treeSeparator);
     
     if(!parent[parts[0]]) parent[parts[0]] = {roles:{},children:{}};
               
     if(parts[1]){
-      saveRole(parent[parts[0]].children,[parts[1],action[1]],role);
+      saveAction(parent[parts[0]].children,[parts.slice(1).join(treeSeparator),action[1]],roleName,inherited);
     }
     else{
-      parent[parts[0]].roles[role[0]] = action[1];
+      let actionValue = {can:action[1],inherited:inherited};
+      
+      if(parent[parts[0]].roles[roleName] && parent[parts[0]].roles[roleName].can === true) return;
+      if(actionValue.can === true || parent[parts[0]].roles[roleName] === undefined) parent[parts[0]].roles[roleName] = actionValue;
     }
       
   }
   
-  Object.entries(roles).forEach(role => {
-    if(role[1].can) Object.entries(role[1].can).forEach(action => {
-      saveRole(actions,action,role);
-    });
-  });
+  Object.entries(roles).forEach(role => saveRole(role[0],role[1],false))
   
   function writeAction(action,prepend){
     if(Object.keys(action[1].roles).length !== 0){
       console.log(prepend + action[0] + ": " + Object.entries(action[1].roles).map(role => {
-        if(role[1] === true) return chalk.green(role[0])
-        if(role[1] === false) return chalk.red(role[0])
-        return chalk.yellow(role[0]);
+        
+        var roleName = role[1].inherited ? role[0] : chalk.bold(role[0]);
+        
+        if(role[1].can === true) return chalk.green(roleName)
+        if(role[1].can === false) return chalk.red(roleName)
+        return chalk.yellow(roleName);
       }).join(", "));
     }
     if(Object.keys(action[1].children).length !== 0){
