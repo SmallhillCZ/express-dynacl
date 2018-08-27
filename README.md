@@ -3,42 +3,49 @@ express-dynacl is a simple ExpressJS dynamic access control list middleware, tha
 
 ## Using express-dynacl
 
+roles.js:
+```js
+module.exports = {
+  "guest": {
+    can: {
+      "posts:list": true,
+      "posts:edit": false
+    }
+  },
+
+  "user": {
+    can: {
+      "posts:create": true,
+      "posts:edit": (req,params) => Post.findOne({_id:params.post.id}).then(post => post.owner === req.user.id)
+    },
+    inherits: ["guest"]
+  },
+
+  "moderator":{
+    can: {
+      "posts:edit": true
+    },
+    inherits: ["user"]
+  },
+
+  "admin": {
+    admin: true
+  }
+}
+```
+
+config.js:
 ```js
 
 var acl = require("express-dynacl");
 
 var Post = require("./models/post");
 
+var roles = require("./roles.js");
+
 var options = {
 
-  roles: {
-  
-    "guest": {
-      can: {
-        "posts:list": true,
-        "posts:edit": false
-      }
-    },
-    
-    "user": {
-      can: {
-        "posts:create": true,
-        "posts:edit": (req,params) => Post.findOne({_id:params.post.id}).then(post => post.owner === req.user.id)
-      },
-      inherits: ["guest"]
-    },
-    
-    "moderator":{
-      can: {
-        "posts:edit": true
-      },
-      inherits: ["user"]
-    },
-    
-    "admin": {
-      admin: true
-    }
-  },
+  roles: roles,
   
   userRoles: req => req.user ? req.user.roles : [], // get user roles
   
@@ -52,7 +59,7 @@ var options = {
   unauthorized: (req,res,next) => res.sendStatus(401) // middleware to use when unauthorized (default is to respond with 401
 }
 
-acl.config(options);
+
 ```
 
 Use as middleware:
@@ -62,6 +69,9 @@ var express = require('express');
 var app = express();
 
 var acl = require("express-dynacl");
+var aclConfig = require("./config.js");
+
+acl.config(aclConfig);
 
 app.get("/posts", acl("posts:list"), (req,res) => {
 	// list posts
@@ -90,6 +100,12 @@ app.put("/posts/:id", (req,res) => {
 
 });
 ```
+
+## Inspect function
+
+```node node_modules/express-dynacl inspect roles.js```
+
+Running this will show a tree of actions split by colon with colored names of roles
 
 ## TODO
 - logging to file
