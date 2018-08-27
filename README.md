@@ -45,7 +45,7 @@ var options = {
   // set some of the roles as default - each request will expect that user has these roles (default is none)
   defaultRole: "guest",
   
-  logString: (role,action,result,req) => "DynACL " + (result ? "OK" : "XX") + " ( action: " + action + (result ? ", role: " + role : "") + " )", // log output string
+  logString: (event) => `DynACL ${event.permission ? "OK" : "XX"} (action: ${event.action}${event.role ? ", role: " + event.role : ""}${Object.keys(event.params) > 0 ? ", params: " + JSON.stringify(event.params) : ""})`,
   logConsole: true, // enable logging to console (default is false)
   
   authorized: (req,res,next) => next(), // middleware to use when authorized (default is send to next middleware)

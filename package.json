@@ -19,5 +19,8 @@
   "bugs": {
     "url": "https://github.com/SmallhillCZ/express-dynacl/issues"
   },
-  "homepage": "https://github.com/SmallhillCZ/express-dynacl#readme"
+  "homepage": "https://github.com/SmallhillCZ/express-dynacl#readme",
+  "dependencies": {
+    "chalk": "^2.4.1"
+  }
 }

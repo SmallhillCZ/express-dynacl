@@ -12,7 +12,7 @@ var dynacl = (function(){
 
     defaultRole: "guest",
 
-    logString: (action,permission,role,req) => "DynACL " + (permission ? "OK" : "XX") + " ( action: " + action + (role ? ", role: " + role : "") + " )",
+    logString: (event) => `DynACL ${event.permission ? "OK" : "XX"} (action: ${event.action}${event.role ? ", role: " + event.role : ""}${Object.keys(event.params) > 0 ? ", params: " + JSON.stringify(event.params) : ""})`,
     logConsole: false,
 
     authorized: (req,res,next) => next(),
@@ -49,7 +49,14 @@ var dynacl = (function(){
 
     // log permission check
     if(options.logConsole){
-      let logString = options.logString(action,permission,roleName,req);
+      let logEvent = {
+        action:action,
+        permission:permission,
+        role:roleName,
+        req:req,
+        params:params
+      };        
+      let logString = options.logString(logEvent);
       if(permission) console.log(logString);
       else console.error(logString);
     }
@@ -63,7 +70,7 @@ var dynacl = (function(){
     // get the role details
     let role = options.roles[roleName];
     
-    // if role does not exists user can't
+    // if role does not exist user can't
     if(!role) return false;
     
     // in case we have admin role, we dont have to check anything
@@ -98,13 +105,16 @@ var dynacl = (function(){
 
 
   // middleware factory
-  function dynacl(action){
+  function dynacl(action,paramsFn){
 
     // return middleware function for ExpressJS
     return async function(req,res,next){
+      
+      // if function to evaluate req to params provided, then use it
+      var params = paramsFn ? paramsFn(req) : {};
 
       // evaluate permission
-      var result = await checkCan(action,req,{});
+      var result = await checkCan(action,req,params);
 
       // if permission granted, send execution to the next middleware/route
       if(result) options.authorized(req,res,next);
@@ -130,4 +140,9 @@ var dynacl = (function(){
   
 })();
 
-module.exports = dynacl;
+if(require.main === module){
+  require("./index.cli.js");
+}
+else{
+  module.exports = dynacl;
+}
